@@ -1,0 +1,35 @@
+# Ignore git files
+.git
+.gitignore
+
+# Ignore python virtual environments
+venv
+.venv
+env
+
+# Ignore byte compilation
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore user data & dbs
+uploads
+chroma_db
+keywords_cache.json
+*.db
+*.sqlite
+
+# Ignore frontend files (not needed for backend image)
+frontend
+node_modules
+.next
+out
+build
+coverage
+
+# Ignore IDE files
+.vscode
+.idea
+*.swp
+*.swo

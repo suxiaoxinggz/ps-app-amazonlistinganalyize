@@ -1,0 +1,58 @@
+{
+    "app": {
+        "title": "亚马逊 Listing 分析器",
+        "settings": "API 设置",
+        "back_home": "返回首页"
+    },
+    "upload": {
+        "title": "首先上传您的数据",
+        "subtitle": "上传包含关键词的 Excel 文件以初始化分析引擎。",
+        "download_template": "下载模版",
+        "drop_text": "拖拽 Excel 文件到这里，或点击选择",
+        "notes_title": "使用指南：",
+        "note_1": "为了获得最佳结果，请使用提供的模板。",
+        "note_2": "支持格式：.xlsx",
+        "note_3": "最大文件大小：10MB"
+    },
+    "listings": {
+        "title": "添加待分析 Listing",
+        "add_new": "添加另一个 Listing",
+        "run_analysis": "开始分析",
+        "analyzing": "分析中...",
+        "asin_placeholder": "例如 B012345678",
+        "text_placeholder": "在此粘贴您的 Listing 标题和五点描述...",
+        "translate_listing": "翻译为中文",
+        "view_translation": "查看译文",
+        "delete": "删除"
+    },
+    "results": {
+        "title": "分析结果",
+        "translate_keywords": "翻译关键词",
+        "translating": "翻译中...",
+        "export_csv": "导出 CSV",
+        "back": "返回 Listing 列表",
+        "global_stats": "流量池概览",
+        "total_keywords": "关键词总数",
+        "total_volume": "总搜索量",
+        "keyword_coverage": "关键词覆盖矩阵",
+        "optimize": "优化 Listing",
+        "optimizing": "优化中..."
+    },
+    "settings_modal": {
+        "title": "API 配置",
+        "backend_url": "后端地址 (VPS)",
+        "api_key": "API 密钥",
+        "provider": "服务商",
+        "model": "模型",
+        "fetch_models": "获取列表"
+    },
+    "optimization": {
+        "title": "Listing 优化配置",
+        "subtitle": "选择需要埋入的缺失关键词。",
+        "selected": "已选",
+        "custom_prompt": "自定义提示词要求",
+        "cancel": "取消",
+        "start": "开始生成",
+        "generating": "生成中..."
+    }
+}

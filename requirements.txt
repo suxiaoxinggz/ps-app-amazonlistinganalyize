@@ -1,0 +1,8 @@
+chromadb
+pandas
+openpyxl
+fastapi
+uvicorn
+python-multipart
+sentence-transformers
+openai

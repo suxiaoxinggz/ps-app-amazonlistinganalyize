@@ -1,0 +1,58 @@
+{
+    "app": {
+        "title": "Amazon Listing Analyzer",
+        "settings": "API Settings",
+        "back_home": "Back to Home"
+    },
+    "upload": {
+        "title": "Start by uploading your data",
+        "subtitle": "Upload your keyword Excel file to initialize the analysis engine.",
+        "download_template": "Download Template",
+        "drop_text": "Drag & drop your Excel file here, or click to select",
+        "notes_title": "Guidelines:",
+        "note_1": "Use the provided template for best results.",
+        "note_2": "Supported format: .xlsx",
+        "note_3": "Maximum file size: 10MB"
+    },
+    "listings": {
+        "title": "Add Listings to Analyze",
+        "add_new": "Add Another Listing",
+        "run_analysis": "Run Analysis",
+        "analyzing": "Analyzing...",
+        "asin_placeholder": "e.g. B012345678",
+        "text_placeholder": "Paste your listing title and bullet points here...",
+        "translate_listing": "Translate to Chinese",
+        "view_translation": "View Translation",
+        "delete": "Delete"
+    },
+    "results": {
+        "title": "Analysis Results",
+        "translate_keywords": "Translate Keywords",
+        "translating": "Translating...",
+        "export_csv": "Export CSV",
+        "back": "Back to Listings",
+        "global_stats": "Total Opportunity Pool",
+        "total_keywords": "Total Keywords",
+        "total_volume": "Total Search Volume",
+        "keyword_coverage": "Keyword Coverage Matrix",
+        "optimize": "Optimize Listing",
+        "optimizing": "Optimizing..."
+    },
+    "settings_modal": {
+        "title": "API Configuration",
+        "backend_url": "Backend URL (VPS Address)",
+        "api_key": "API Key",
+        "provider": "Provider",
+        "model": "Model",
+        "fetch_models": "Fetch List"
+    },
+    "optimization": {
+        "title": "Optimization Setup",
+        "subtitle": "Select missing keywords to inject into your listing.",
+        "selected": "Selected",
+        "custom_prompt": "Custom Prompt Instructions",
+        "cancel": "Cancel",
+        "start": "Start Optimization",
+        "generating": "Generating..."
+    }
+}

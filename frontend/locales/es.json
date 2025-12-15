@@ -1,0 +1,58 @@
+{
+    "app": {
+        "title": "Analizador de Listings de Amazon",
+        "settings": "Configuración API",
+        "back_home": "Volver al Inicio"
+    },
+    "upload": {
+        "title": "Comience subiendo sus datos",
+        "subtitle": "Suba su archivo Excel de palabras clave para inicializar.",
+        "download_template": "Descargar Plantilla",
+        "drop_text": "Arrastre su archivo Excel aquí o haga clic para seleccionar",
+        "notes_title": "Guía:",
+        "note_1": "Use la plantilla proporcionada para mejores resultados.",
+        "note_2": "Formato soportado: .xlsx",
+        "note_3": "Tamaño máximo: 10MB"
+    },
+    "listings": {
+        "title": "Añadir Listings para Analizar",
+        "add_new": "Añadir Otro Listing",
+        "run_analysis": "Ejecutar Análisis",
+        "analyzing": "Analizando...",
+        "asin_placeholder": "ej. B012345678",
+        "text_placeholder": "Pegue aquí el título y las viñetas de su listing...",
+        "translate_listing": "Traducir a Chino",
+        "view_translation": "Ver Traducción",
+        "delete": "Eliminar"
+    },
+    "results": {
+        "title": "Resultados del Análisis",
+        "translate_keywords": "Traducir Palabras Clave",
+        "translating": "Traduciendo...",
+        "export_csv": "Exportar CSV",
+        "back": "Volver a Listings",
+        "global_stats": "Fondo de Oportunidad Total",
+        "total_keywords": "Total Palabras Clave",
+        "total_volume": "Volumen Total de Búsqueda",
+        "keyword_coverage": "Matriz de Cobertura de Palabras Clave",
+        "optimize": "Optimizar Listing",
+        "optimizing": "Optimizando..."
+    },
+    "settings_modal": {
+        "title": "Configuración de API",
+        "backend_url": "URL del Backend (VPS)",
+        "api_key": "Clave API",
+        "provider": "Proveedor",
+        "model": "Modelo",
+        "fetch_models": "Obtener Lista"
+    },
+    "optimization": {
+        "title": "Configuración de Optimización",
+        "subtitle": "Seleccione las palabras clave que faltan para inyectar.",
+        "selected": "Seleccionado",
+        "custom_prompt": "Instrucciones Personalizadas",
+        "cancel": "Cancelar",
+        "start": "Comenzar Optimización",
+        "generating": "Generando..."
+    }
+}
