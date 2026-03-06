@@ -1,5 +1,4 @@
 import chromadb
-from chromadb.utils import embedding_functions
 from sentence_transformers import SentenceTransformer, util
 from transformers import pipeline
 from sklearn.feature_extraction.text import CountVectorizer
@@ -61,7 +60,7 @@ class HybridMatcher:
         try:
             count = CountVectorizer(ngram_range=n_gram_range, stop_words=stop_words).fit([text])
             candidates = count.get_feature_names_out()
-        except:
+        except Exception:
             return []
 
         doc_embedding = self.embedding_model.encode([text])
@@ -80,11 +79,12 @@ class HybridMatcher:
         keywords_data: List of dicts, must contain 'keyword' key.
         """
         # Reset collection to avoid ID conflicts and stale data
+        collection_name = self.collection.name
         try:
-            self.client.delete_collection(self.collection.name)
+            self.client.delete_collection(collection_name)
         except Exception:
             pass
-        self.collection = self.client.create_collection(name="amazon_keywords")
+        self.collection = self.client.create_collection(name=collection_name)
 
         documents = []
         metadatas = []
@@ -109,12 +109,16 @@ class HybridMatcher:
             # Generate embeddings
             embeddings = self.embedding_model.encode(documents).tolist()
             
-            self.collection.add(
-                documents=documents,
-                embeddings=embeddings,
-                metadatas=metadatas,
-                ids=ids
-            )
+            # Batch add to avoid ChromaDB batch size limits
+            batch_size = 5000
+            for i in range(0, len(documents), batch_size):
+                end = min(i + batch_size, len(documents))
+                self.collection.add(
+                    documents=documents[i:end],
+                    embeddings=embeddings[i:end],
+                    metadatas=metadatas[i:end],
+                    ids=ids[i:end]
+                )
             
     def text_match(self, listing_text: str, keywords: List[str]) -> List[str]:
         """

@@ -6,3 +6,5 @@ uvicorn
 python-multipart
 sentence-transformers
 openai
+transformers
+scikit-learn

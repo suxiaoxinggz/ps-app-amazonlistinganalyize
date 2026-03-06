@@ -36,21 +36,37 @@ class DataProcessor:
             # The previous logic used header=[0,1]. Let's try to adapt that.
             
             if header_row_idx == 0:
-                 # Try reading as multi-index first to be safe for the known format
-                df = pd.read_excel(file_path, header=[0, 1])
-                # Check if it actually looks like a multi-index (tuples)
-                if isinstance(df.columns[0], tuple):
-                    # Flatten
-                    new_columns = []
-                    for col in df.columns:
-                        c1 = str(col[0]).strip()
-                        c2 = str(col[1]).strip()
-                        if "Unnamed" in c2 or c2 == "nan":
-                            final_col = c1
+                # First try single-row header (most common case)
+                df_single = pd.read_excel(file_path, header=0)
+                # Check if a multi-index parse might be needed
+                try:
+                    df_multi = pd.read_excel(file_path, header=[0, 1])
+                    if isinstance(df_multi.columns[0], tuple):
+                        # Verify it's truly a multi-level header by checking
+                        # if the second level has meaningful (non-Unnamed) values
+                        has_real_sublevel = any(
+                            "Unnamed" not in str(col[1]) and str(col[1]) != "nan"
+                            for col in df_multi.columns
+                        )
+                        if has_real_sublevel:
+                            # Flatten multi-index
+                            new_columns = []
+                            for col in df_multi.columns:
+                                c1 = str(col[0]).strip()
+                                c2 = str(col[1]).strip()
+                                if "Unnamed" in c2 or c2 == "nan":
+                                    final_col = c1
+                                else:
+                                    final_col = c2
+                                new_columns.append(final_col)
+                            df_multi.columns = new_columns
+                            df = df_multi
                         else:
-                            final_col = c2
-                        new_columns.append(final_col)
-                    df.columns = new_columns
+                            df = df_single
+                    else:
+                        df = df_single
+                except Exception:
+                    df = df_single
             else:
                 # If header is deep (e.g. row 5), it's likely a single row header
                 df = pd.read_excel(file_path, header=header_row_idx)
@@ -104,13 +120,13 @@ class DataProcessor:
                 # Data cleaning for specific fields
                 if field == 'search_volume':
                     try:
-                        val = int(str(val).replace(',', '').replace(' ', '')) if val and val != '--' else 0
-                    except:
+                        val = int(float(str(val).replace(',', '').replace(' ', ''))) if val and str(val).strip() not in ('', '--', 'nan', 'None') else 0
+                    except (ValueError, TypeError):
                         val = 0
                 elif field == 'search_rank':
                     try:
-                        val = int(str(val).replace(',', '')) if val and val != '--' else 999999
-                    except:
+                        val = int(float(str(val).replace(',', ''))) if val and str(val).strip() not in ('', '--', 'nan', 'None') else 999999
+                    except (ValueError, TypeError):
                         val = 999999
                 
                 record[field] = val

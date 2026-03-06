@@ -73,9 +73,23 @@ class LLMClient:
                 user_prompt=prompt
             )
             
-            response = self._call_api_with_retry(messages, response_format={"type": "json_object"})
+            # Try with json_object format first, fallback to plain text if unsupported
+            try:
+                response = self._call_api_with_retry(messages, response_format={"type": "json_object"})
+            except Exception as format_err:
+                error_str = str(format_err).lower()
+                if "json" in error_str or "response_format" in error_str or "400" in error_str:
+                    # Model doesn't support json_object, retry without it
+                    response = self._call_api_with_retry(messages)
+                else:
+                    raise format_err
             
             content = response.choices[0].message.content
+            # Try to extract JSON from response (may contain markdown code blocks)
+            import re
+            json_match = re.search(r'```(?:json)?\s*([\s\S]*?)```', content)
+            if json_match:
+                content = json_match.group(1).strip()
             return json.loads(content)
         except Exception as e:
             print(f"Translation error: {e}")

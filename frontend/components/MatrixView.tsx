@@ -69,10 +69,10 @@ export default function MatrixView({ data, asins }: MatrixViewProps) {
                                     </Badge>
                                 </TableCell>
                                 <TableCell className="text-right text-muted-foreground font-mono">
-                                    {row.search_volume.toLocaleString()}
+                                    {(row.search_volume ?? 0).toLocaleString()}
                                 </TableCell>
                                 <TableCell className="text-right text-muted-foreground font-mono">
-                                    {row.rank === 999999 ? '--' : row.rank}
+                                    {row.rank == null || row.rank === 999999 ? '--' : row.rank}
                                 </TableCell>
                                 <TableCell className="text-right text-muted-foreground font-mono">
                                     {row.conversion_rate || '--'}

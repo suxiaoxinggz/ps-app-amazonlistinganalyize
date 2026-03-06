@@ -8,11 +8,15 @@ import os
 import math
 
 class ListingAnalyzer:
-    def __init__(self):
-        self.matcher = HybridMatcher()
+    def __init__(self, project_id: str = None, collection_name: str = "amazon_keywords", cache_file: str = "keywords_cache.json"):
+        if project_id:
+            from app.core.project_manager import get_collection_name, get_cache_path
+            collection_name = get_collection_name(project_id)
+            cache_file = get_cache_path(project_id)
+        self.matcher = HybridMatcher(collection_name=collection_name)
         self.processor = DataProcessor()
         self.cached_keywords = []
-        self.cache_file = "keywords_cache.json"
+        self.cache_file = cache_file
         self._load_from_cache()
 
     def _load_from_cache(self):
@@ -105,7 +109,10 @@ class ListingAnalyzer:
         
         # Calculate totals for denominator
         total_keywords = len(self.cached_keywords)
-        total_search_volume = sum(k.get('search_volume', 0) for k in self.cached_keywords)
+        total_search_volume = sum(
+            k.get('search_volume', 0) for k in self.cached_keywords
+            if isinstance(k.get('search_volume', 0), (int, float))
+        )
         
         results = {}
         matrix_data = [] # For the heatmap: Keyword | ASIN1 | ASIN2 ...
@@ -148,6 +155,9 @@ class ListingAnalyzer:
             for k in self.cached_keywords:
                 seg = k.get('segment', 'Unknown')
                 vol = k.get('search_volume', 0)
+                # Ensure vol is numeric for safe accumulation
+                if not isinstance(vol, (int, float)):
+                    vol = 0
                 
                 # Update Totals
                 if seg in segment_stats:

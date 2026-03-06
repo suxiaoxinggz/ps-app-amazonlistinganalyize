@@ -1,26 +1,15 @@
 
-# Forcefully patch cpuinfo to prevent crash on Leapcell/Docker
-import sys
-from unittest.mock import MagicMock
+# cpuinfo mock is handled in app/__init__.py
 
-mock_cpuinfo = MagicMock()
-mock_cpuinfo.get_cpu_info.return_value = {
-    "arch": "X86_64", 
-    "brand_raw": "Intel(R) Xeon(R) CPU @ 2.20GHz",
-    "bits": 64,
-    "count": 4,
-    "flags": []
-}
-sys.modules["cpuinfo"] = mock_cpuinfo
-
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from app.core.llm_client import LLMClient
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import shutil
 import os
 from app.core.analyzer import ListingAnalyzer
+from app.core import project_manager
 
 app = FastAPI(title="Amazon Listing Analyzer")
 
@@ -38,10 +27,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global Analyzer Instance
-analyzer = ListingAnalyzer()
+# Per-project Analyzer instances (lazy-loaded)
+_analyzers: Dict[str, ListingAnalyzer] = {}
+# Legacy fallback for gateway endpoints
+_default_analyzer = ListingAnalyzer()
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+def _get_analyzer(project_id: Optional[str] = None) -> ListingAnalyzer:
+    """Returns a project-specific or default analyzer."""
+    if not project_id:
+        return _default_analyzer
+    if project_id not in _analyzers:
+        _analyzers[project_id] = ListingAnalyzer(project_id=project_id)
+    return _analyzers[project_id]
 
 class ListingInput(BaseModel):
     asin: str
@@ -49,6 +48,7 @@ class ListingInput(BaseModel):
 
 class AnalyzeRequest(BaseModel):
     listings: List[ListingInput]
+    project_id: Optional[str] = None
 
 @app.get("/")
 def read_root():
@@ -65,16 +65,27 @@ logging.basicConfig(
 )
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...), project_id: Optional[str] = Query(None)):
+    # Sanitize filename to prevent path traversal
+    import re
+    safe_filename = re.sub(r'[^\w.\-]', '_', os.path.basename(file.filename or 'upload.xlsx'))
     try:
-        logging.info(f"Starting upload for file: {file.filename}")
-        file_path = os.path.join(UPLOAD_DIR, file.filename)
+        logging.info(f"Starting upload for file: {file.filename}, project: {project_id}")
+        
+        # Use project-specific upload directory if project_id is provided
+        if project_id:
+            upload_dir = project_manager.get_upload_dir(project_id)
+        else:
+            upload_dir = UPLOAD_DIR
+        
+        file_path = os.path.join(upload_dir, safe_filename)
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
             
         logging.info(f"File saved to {file_path}. Starting indexing...")
         
-        # Index the data immediately
+        # Index the data using project-specific analyzer
+        analyzer = _get_analyzer(project_id)
         count = analyzer.load_and_index_data(file_path)
         
         logging.info(f"Indexing successful. Count: {count}")
@@ -93,10 +104,11 @@ async def upload_file(file: UploadFile = File(...)):
 @app.post("/analyze")
 async def analyze_listings(request: AnalyzeRequest):
     try:
-        logging.info(f"Received analysis request for {len(request.listings)} listings")
+        logging.info(f"Received analysis request for {len(request.listings)} listings, project: {request.project_id}")
         # Convert Pydantic models to dicts
         listings_data = [{"asin": l.asin, "text": l.text} for l in request.listings]
         
+        analyzer = _get_analyzer(request.project_id)
         result = analyzer.analyze_listings(listings_data)
         logging.info("Analysis completed successfully")
         return result
@@ -120,9 +132,8 @@ class OptimizationRequest(BaseModel):
     missing_keywords: List[str]
     api_key: str
     base_url: str = "https://api.openai.com/v1"
-    base_url: str = "https://api.openai.com/v1"
     model: str = "gpt-3.5-turbo"
-    custom_prompt: str = None
+    custom_prompt: Optional[str] = None
 
 class TranslateListingRequest(BaseModel):
     text: str
@@ -156,6 +167,82 @@ async def translate_listing(request: TranslateListingRequest):
         return {"translation": translation}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# --- Project Management Endpoints ---
+
+class ProjectCreateRequest(BaseModel):
+    name: str
+    password: str
+    contact: str = ""
+
+class ProjectVerifyRequest(BaseModel):
+    project_id: str
+    password: str
+
+class ProjectDeleteRequest(BaseModel):
+    project_id: str
+    password: str
+
+class AdminClearRequest(BaseModel):
+    admin_password: str
+
+@app.post("/project/create", tags=["Project"])
+async def create_project(request: ProjectCreateRequest):
+    """Create a new isolated project."""
+    if not request.name or not request.password:
+        raise HTTPException(status_code=400, detail="Name and password are required")
+    if len(request.password) < 4:
+        raise HTTPException(status_code=400, detail="Password must be at least 4 characters")
+    result = project_manager.create_project(request.name, request.password, request.contact)
+    return result
+
+@app.post("/project/verify", tags=["Project"])
+async def verify_project(request: ProjectVerifyRequest):
+    """Verify project password and return project info."""
+    if not project_manager.verify_project(request.project_id, request.password):
+        raise HTTPException(status_code=403, detail="Invalid project ID or password")
+    info = project_manager.get_project_info(request.project_id)
+    return info
+
+@app.post("/project/delete", tags=["Project"])
+async def delete_project(request: ProjectDeleteRequest):
+    """Delete a project and its data (requires password)."""
+    if not project_manager.delete_project(request.project_id, request.password):
+        raise HTTPException(status_code=403, detail="Invalid project ID or password")
+    # Remove cached analyzer instance
+    _analyzers.pop(request.project_id, None)
+    # Try to clean ChromaDB collection
+    try:
+        from chromadb import PersistentClient
+        client = PersistentClient(path="./chroma_db")
+        col_name = project_manager.get_collection_name(request.project_id)
+        client.delete_collection(col_name)
+    except Exception:
+        pass
+    return {"message": "Project deleted successfully"}
+
+@app.post("/admin/clear", tags=["Admin"])
+async def admin_clear(request: AdminClearRequest):
+    """Admin: clear ALL projects and data."""
+    admin_pw = os.getenv("ADMIN_PASSWORD")
+    if not admin_pw:
+        raise HTTPException(status_code=500, detail="Admin password not configured on server")
+    if not project_manager.admin_clear_all(request.admin_password, admin_pw):
+        raise HTTPException(status_code=403, detail="Invalid admin password")
+    # Clear all cached analyzers and ChromaDB
+    _analyzers.clear()
+    try:
+        import shutil as _shutil
+        if os.path.exists("./chroma_db"):
+            _shutil.rmtree("./chroma_db")
+    except Exception:
+        pass
+    return {"message": "All data cleared successfully"}
+
+@app.get("/project/list", tags=["Project"])
+async def list_projects():
+    """List all projects (public info only)."""
+    return project_manager.list_projects()
 
 # --- AI Gateway Implementation ---
 
@@ -206,7 +293,7 @@ async def get_embeddings(request: EmbeddingRequest):
     Secured by X-Gateway-Key header.
     """
     try:
-        embeddings = analyzer.matcher.get_embeddings(request.texts)
+        embeddings = _default_analyzer.matcher.get_embeddings(request.texts)
         return {
             "embeddings": embeddings,
             "model": "all-MiniLM-L6-v2",
@@ -224,7 +311,7 @@ async def check_similarity(request: SimilarityRequest):
     Gateway Endpoint: Calculate Cosine Similarity between two texts.
     """
     try:
-        score = analyzer.matcher.calculate_similarity(request.text_1, request.text_2)
+        score = _default_analyzer.matcher.calculate_similarity(request.text_1, request.text_2)
         return {"score": score}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -238,7 +325,7 @@ async def analyze_sentiment(request: SentimentRequest):
     Uses 'distilbert-base-uncased-finetuned-sst-2-english'.
     """
     try:
-        results = analyzer.matcher.analyze_sentiment(request.texts)
+        results = _default_analyzer.matcher.analyze_sentiment(request.texts)
         return {"results": results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -251,7 +338,7 @@ async def extract_keywords(request: KeywordRequest):
     Gateway Endpoint: Extract keywords using KeyBERT-Lite logic.
     """
     try:
-        keywords = analyzer.matcher.extract_keywords(request.text, request.top_n)
+        keywords = _default_analyzer.matcher.extract_keywords(request.text, request.top_n)
         return {"keywords": keywords}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -264,7 +351,7 @@ async def gateway_health():
     Gateway Endpoint: Check system status.
     """
     models = ["all-MiniLM-L6-v2"]
-    if analyzer.matcher.sentiment_analyzer:
+    if _default_analyzer.matcher.sentiment_analyzer:
         models.append("distilbert-sentiment")
         
     return {

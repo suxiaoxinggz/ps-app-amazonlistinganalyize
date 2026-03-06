@@ -10,9 +10,10 @@ import { useTranslation } from "@/lib/i18n";
 interface UploaderProps {
     onUploadSuccess: (summary: unknown) => void;
     backendUrl: string;
+    projectId?: string | null;
 }
 
-export default function Uploader({ onUploadSuccess, backendUrl }: UploaderProps) {
+export default function Uploader({ onUploadSuccess, backendUrl, projectId }: UploaderProps) {
     const { t } = useTranslation();
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -29,7 +30,10 @@ export default function Uploader({ onUploadSuccess, backendUrl }: UploaderProps)
         formData.append('file', file);
 
         try {
-            const response = await axios.post(`${backendUrl}/upload`, formData, {
+            const uploadUrl = projectId
+                ? `${backendUrl}/upload?project_id=${encodeURIComponent(projectId)}`
+                : `${backendUrl}/upload`;
+            const response = await axios.post(uploadUrl, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
@@ -97,7 +101,7 @@ export default function Uploader({ onUploadSuccess, backendUrl }: UploaderProps)
                     </div>
 
                     <div className="flex w-full justify-between items-center pt-2">
-                        <a href="/keyword_template.xlsx" download className="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                        <a href="/api/template" download="keyword_template.xlsx" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
                             <Download className="w-4 h-4" />
                             {t('upload.download_template')}
                         </a>

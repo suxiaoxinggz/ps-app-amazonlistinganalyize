@@ -7,6 +7,8 @@ import { Header } from '@/components/Header';
 import { Plus, Download, Maximize2, Trash2, Languages, Sparkles } from 'lucide-react';
 import axios from 'axios';
 import { useTranslation } from '@/lib/i18n';
+import ProjectEntry from '@/components/ProjectEntry';
+import StepGuide from '@/components/StepGuide';
 
 // Shadcn Components
 import { Button } from "@/components/ui/button";
@@ -73,10 +75,18 @@ export default function MainPage() {
         localStorage.setItem('backend_url', url);
     };
 
-    const [step, setStep] = useState<'upload' | 'listings' | 'results'>('upload');
+    const [step, setStep] = useState<'project' | 'upload' | 'listings' | 'results'>('project');
+    const [projectId, setProjectId] = useState<string | null>(null);
+    const [projectName, setProjectName] = useState<string>('');
     const [listings, setListings] = useState<Listing[]>([{ asin: '', text: '' }]);
     const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+    const handleProjectReady = (pid: string, name: string) => {
+        setProjectId(pid);
+        setProjectName(name);
+        setStep('upload');
+    };
 
     // API Settings
     const [provider, setProvider] = useState('OpenAI');
@@ -120,7 +130,9 @@ export default function MainPage() {
                 fetchedModels = response.data.data.map((m: { id: string }) => m.id);
             } else if (provider === 'Google') {
                 if (!apiKey) { alert('API Key Required'); return; }
-                const response = await axios.get(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+                const response = await axios.get(`https://generativelanguage.googleapis.com/v1beta/models`, {
+                    headers: { 'x-goog-api-key': apiKey }
+                });
                 fetchedModels = response.data.models.map((m: { name: string }) => m.name.replace('models/', ''));
             } else {
                 if (!apiKey) { alert('API Key Required'); return; }
@@ -159,7 +171,7 @@ export default function MainPage() {
         setIsAnalyzing(true);
         try {
             const validListings = listings.filter(l => l.asin && l.text);
-            const response = await axios.post(`${backendUrl}/analyze`, { listings: validListings });
+            const response = await axios.post(`${backendUrl}/analyze`, { listings: validListings, project_id: projectId });
             setAnalysisResult(response.data);
             setStep('results');
         } catch (error) {
@@ -175,11 +187,14 @@ export default function MainPage() {
         if (!analysisResult) return;
         setIsTranslating(true);
         try {
-            const keywordsToTranslate = analysisResult.matrix
+            const allUntranslated = analysisResult.matrix
                 .filter((r: KeywordStats) => !r.translation)
-                .map((r: KeywordStats) => r.keyword)
-                .slice(0, 50);
+                .map((r: KeywordStats) => r.keyword);
+            const keywordsToTranslate = allUntranslated.slice(0, 50);
             if (keywordsToTranslate.length === 0) return;
+            if (allUntranslated.length > 50) {
+                console.warn(`Translating first 50 of ${allUntranslated.length} keywords. Click again to translate more.`);
+            }
 
             const response = await axios.post(`${backendUrl}/api/translate`, {
                 keywords: keywordsToTranslate, api_key: apiKey, base_url: baseUrl, model: model
@@ -263,11 +278,30 @@ export default function MainPage() {
     const exportToCSV = () => {
         if (!analysisResult) return;
         const asins = listings.filter(l => l.asin).map(l => l.asin);
-        const headers = ['Keyword', 'Segment', 'Search Volume', 'Rank', 'CVR', 'CPC', 'Competitors', ...asins];
+        const escapeCsv = (val: unknown): string => {
+            const str = String(val ?? '');
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+        };
+        const headers = ['Keyword', 'Translation', 'Segment', 'Search Volume', 'Rank', 'CVR', 'CPC', 'Competitors', ...asins].map(h => escapeCsv(h));
         const rows = analysisResult.matrix.map((row: KeywordStats) => {
-            return [`"${row.keyword}"`, row.segment || 'Unknown', row.search_volume, row.rank, row.conversion_rate || '', row.cpc || '', row.competitors || '', ...asins.map((asin: string) => row[asin] === 1 ? 'Yes' : 'No')];
+            return [
+                escapeCsv(row.keyword),
+                escapeCsv(row.translation || ''),
+                escapeCsv(row.segment || 'Unknown'),
+                escapeCsv(row.search_volume ?? 0),
+                escapeCsv(row.rank == null || row.rank === 999999 ? '--' : row.rank),
+                escapeCsv(row.conversion_rate || ''),
+                escapeCsv(row.cpc || ''),
+                escapeCsv(row.competitors || ''),
+                ...asins.map((asin: string) => row[asin] === 1 ? 'Yes' : 'No')
+            ];
         });
-        const csvContent = [headers.join(','), ...rows.map((r: (string | number)[]) => r.join(','))].join('\n');
+        // Add UTF-8 BOM for Excel Chinese display
+        const bom = '\uFEFF';
+        const csvContent = bom + [headers.join(','), ...rows.map((r: string[]) => r.join(','))].join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         if (link.download !== undefined) {
@@ -278,6 +312,7 @@ export default function MainPage() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         }
     };
 
@@ -285,10 +320,24 @@ export default function MainPage() {
         <div className="min-h-screen bg-gray-50/50">
             <Header
                 onSettingsClick={() => setShowSettings(true)}
-                onHomeClick={() => setStep('upload')}
+                onHomeClick={() => setStep('project')}
             />
 
             <main className="container py-8 max-w-7xl mx-auto">
+                {/* Project info badge */}
+                {projectId && step !== 'project' && (
+                    <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+                        <Badge variant="outline">Project: {projectName} ({projectId})</Badge>
+                        <Button variant="ghost" size="sm" onClick={() => { setStep('project'); setProjectId(null); setProjectName(''); setAnalysisResult(null); }}>
+                            Switch Project
+                        </Button>
+                    </div>
+                )}
+
+                {step === 'project' && (
+                    <ProjectEntry backendUrl={backendUrl} onProjectReady={handleProjectReady} />
+                )}
+
                 {step === 'upload' && (
                     <div className="relative isolate overflow-hidden bg-white px-6 py-24 sm:py-32 lg:overflow-visible lg:px-0 rounded-3xl border shadow-sm">
                         <div className="absolute inset-0 -z-10 overflow-hidden">
@@ -305,8 +354,26 @@ export default function MainPage() {
                                 {t('upload.subtitle')}
                             </p>
                             <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 shadow-xl">
-                                <Uploader onUploadSuccess={handleUploadSuccess} backendUrl={backendUrl} />
+                                <Uploader onUploadSuccess={handleUploadSuccess} backendUrl={backendUrl} projectId={projectId} />
                             </div>
+                        </div>
+
+                        <div className="mx-auto max-w-3xl mt-8 relative z-10">
+                            <StepGuide
+                                titleZh="上传操作指南"
+                                titleEn="Upload Guide"
+                                steps={[
+                                    { zh: '准备关键词Excel文件，需包含"关键词/Keyword"列', en: 'Prepare a keyword Excel file with a "Keyword/关键词" column' },
+                                    { zh: '可选列：搜索量(Search Volume)、排名(Rank)、转化率(CVR)、CPC、竞争度(Competitors)', en: 'Optional columns: Search Volume, Rank, CVR, CPC, Competitors' },
+                                    { zh: '点击上传区域或拖拽文件上传，支持 .xlsx/.xls 格式', en: 'Click the upload area or drag-and-drop, supports .xlsx/.xls format' },
+                                    { zh: '上传成功后，系统自动索引关键词并跳转到下一步', en: 'After upload, the system auto-indexes keywords and advances to the next step' },
+                                ]}
+                                tips={[
+                                    { zh: '可下载模板文件查看推荐的Excel格式', en: 'Download the template file to see the recommended Excel format' },
+                                    { zh: '支持多级表头和不同列名格式，系统会自动识别', en: 'Multi-level headers and different column names are auto-detected' },
+                                    { zh: '关键词数量建议控制在5万以内以获得最佳性能', en: 'For best performance, keep keyword count under 50,000' },
+                                ]}
+                            />
                         </div>
                     </div>
                 )}
@@ -386,6 +453,23 @@ export default function MainPage() {
                         <Button variant="outline" className="w-full border-dashed py-8 border-2 gap-2 h-auto" onClick={addListing}>
                             <Plus className="w-4 h-4" /> {t('listings.add_new')}
                         </Button>
+
+                        <StepGuide
+                            titleZh="Listing输入操作指南"
+                            titleEn="Listing Input Guide"
+                            steps={[
+                                { zh: '输入ASIN编号（10位亚马逊产品标识码）', en: 'Enter the ASIN (10-character Amazon product identifier)' },
+                                { zh: '在"Listing Content"中粘贴完整的商品文案（标题+五点+描述+ST）', en: 'Paste the full listing text (Title + Bullets + Description + Search Terms) into "Listing Content"' },
+                                { zh: '可添加多个Listing进行对比分析（点击底部"+"按钮）', en: 'Add multiple listings for comparison (click the "+" button at bottom)' },
+                                { zh: '可使用翻译按钮将英文Listing翻译为中文（需先配置AI设置）', en: 'Use the translate button to translate English listings to Chinese (requires AI settings)' },
+                                { zh: '确认无误后点击右上角"Run Analysis"开始分析', en: 'Click "Run Analysis" in the top right to start analysis' },
+                            ]}
+                            tips={[
+                                { zh: '建议粘贴完整的Listing内容以获得最准确的覆盖率分析', en: 'Paste the complete listing content for the most accurate coverage analysis' },
+                                { zh: '翻译功能需在右上角设置中配置AI Provider和API Key', en: 'Translation requires configuring AI Provider and API Key in settings (top-right)' },
+                                { zh: '支持同时分析最多10个Listing进行竞品对比', en: 'Supports analyzing up to 10 listings for competitor comparison' },
+                            ]}
+                        />
                     </div>
                 )}
 
@@ -475,6 +559,24 @@ export default function MainPage() {
                                 <MatrixView data={analysisResult.matrix} asins={listings.filter(l => l.asin).map(l => l.asin)} />
                             </CardContent>
                         </Card>
+
+                        <StepGuide
+                            titleZh="分析结果操作指南"
+                            titleEn="Results Guide"
+                            steps={[
+                                { zh: '顶部卡片显示关键词总数、总搜索量等全局统计', en: 'Top cards show global stats: total keywords, total search volume, etc.' },
+                                { zh: '每个ASIN卡片显示该Listing的关键词覆盖率和搜索量覆盖率', en: 'Each ASIN card shows that listing\'s keyword coverage and volume coverage' },
+                                { zh: '点击"Translate Keywords"翻译所有关键词为中文（需配置AI）', en: 'Click "Translate Keywords" to translate all keywords to Chinese (requires AI setup)' },
+                                { zh: '点击ASIN卡片中的"Optimize"按钮，AI会根据缺失关键词给出优化建议', en: 'Click "Optimize" on any ASIN card — AI suggests improvements based on missing keywords' },
+                                { zh: '点击"Export CSV"下载完整的分析报告', en: 'Click "Export CSV" to download the complete analysis report' },
+                            ]}
+                            tips={[
+                                { zh: '分段统计（核心词/长尾词等）帮助你了解不同重要级别的覆盖情况', en: 'Segment stats (Core/Long-tail) help you understand coverage by importance level' },
+                                { zh: '矩阵表中绿色"✓"表示该关键词在该Listing中被覆盖', en: 'Green "✓" in the matrix means that keyword is covered in that listing' },
+                                { zh: '搜索量覆盖率往往比关键词数量覆盖率更有参考价值', en: 'Volume coverage is often more valuable than keyword count coverage' },
+                                { zh: '导出的CSV文件包含翻译列，用Excel打开中文不会乱码', en: 'The exported CSV includes translations and displays Chinese correctly in Excel' },
+                            ]}
+                        />
                     </div>
                 )}
             </main>
