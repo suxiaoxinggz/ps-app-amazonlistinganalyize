@@ -98,7 +98,7 @@ export default function ProjectEntry({ backendUrl, onProjectReady }: ProjectEntr
                 contact: createContact.trim(),
             });
             const data = response.data;
-            alert(`项目已创建！/ Project created!\n\nProject ID: ${data.project_id}\n⚠️ 请保存此ID / Please save this ID`);
+            alert(`项目 "${data.name}" 创建成功！\nProject "${data.name}" created!`);
             setCreateName('');
             setCreatePassword('');
             setCreateContact('');

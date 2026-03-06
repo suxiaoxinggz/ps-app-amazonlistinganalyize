@@ -54,6 +54,41 @@ class AnalyzeRequest(BaseModel):
 def read_root():
     return {"message": "Amazon Listing Analyzer API is running"}
 
+@app.get("/template/download", tags=["Template"])
+async def download_template():
+    """Generate and return a keyword template Excel file."""
+    from fastapi.responses import StreamingResponse
+    from openpyxl import Workbook
+    import io
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Keywords"
+
+    # Headers matching what data_processor expects
+    headers = ["Keyword", "Search Volume", "Search Volume Trend", "CPC", "Competition"]
+    ws.append(headers)
+
+    # Example rows
+    ws.append(["wireless earbuds", 450000, "↑", 1.25, "High"])
+    ws.append(["bluetooth headphones", 320000, "→", 0.98, "Medium"])
+    ws.append(["noise cancelling earphones", 180000, "↑", 1.50, "High"])
+
+    # Auto-fit column widths
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or "")) for cell in col)
+        ws.column_dimensions[col[0].column_letter].width = max_len + 4
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="keyword_template.xlsx"'},
+    )
+
 import logging
 import traceback
 

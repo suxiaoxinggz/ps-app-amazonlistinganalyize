@@ -101,7 +101,7 @@ export default function Uploader({ onUploadSuccess, backendUrl, projectId }: Upl
                     </div>
 
                     <div className="flex w-full justify-between items-center pt-2">
-                        <a href="/api/template" download="keyword_template.xlsx" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                        <a href={`${backendUrl}/template/download`} download="keyword_template.xlsx" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
                             <Download className="w-4 h-4" />
                             {t('upload.download_template')}
                         </a>
