@@ -11,10 +11,12 @@ services:
     volumes:
       - ./uploads:/app/uploads
       - ./chroma_db:/app/chroma_db
+      - ./data:/app/data
     restart: always
     environment:
       - PORT=8000
       - GATEWAY_API_KEY
+      - ADMIN_PASSWORD
 
   frontend:
     build:

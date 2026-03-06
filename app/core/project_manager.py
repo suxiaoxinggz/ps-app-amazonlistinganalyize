@@ -11,9 +11,11 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 
 
-PROJECTS_DB_FILE = "projects_db.json"
-CACHE_DIR = "cache"
+DATA_DIR = "data"
+PROJECTS_DB_FILE = os.path.join(DATA_DIR, "projects_db.json")
+CACHE_DIR = os.path.join(DATA_DIR, "cache")
 
+os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 
