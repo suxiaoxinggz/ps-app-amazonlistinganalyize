@@ -65,14 +65,24 @@ async def download_template():
     ws = wb.active
     ws.title = "Keywords"
 
-    # Headers matching what data_processor expects
-    headers = ["Keyword", "Search Volume", "Search Volume Trend", "CPC", "Competition"]
+    # Headers matching data_processor.py field_mappings exactly
+    headers = [
+        "关键词",           # keyword
+        "关键词翻译",       # translation
+        "月搜索量",         # search_volume
+        "词搜索转换比(%)",  # conversion_rate
+        "点击转化占比TOP3 ASIN",  # top3_click_share
+        "包含ASIN",         # asin_coverage
+        "cpc精准竞价($)",   # cpc_exact
+        "周搜索排名",       # search_rank
+        "竞品数量",         # competitor_count
+    ]
     ws.append(headers)
 
     # Example rows
-    ws.append(["wireless earbuds", 450000, "↑", 1.25, "High"])
-    ws.append(["bluetooth headphones", 320000, "→", 0.98, "Medium"])
-    ws.append(["noise cancelling earphones", 180000, "↑", 1.50, "High"])
+    ws.append(["wireless earbuds", "无线耳机", 450000, "5.2%", "B09XYZ1234,B09ABC5678,B09DEF9012", "B09XYZ1234", 1.25, 1, 850])
+    ws.append(["bluetooth headphones", "蓝牙耳机", 320000, "3.8%", "B08AAA1111,B08BBB2222,B08CCC3333", "", 0.98, 5, 1200])
+    ws.append(["noise cancelling earphones", "降噪耳机", 180000, "4.1%", "B07DDD4444,B07EEE5555,B07FFF6666", "B07DDD4444", 1.50, 12, 620])
 
     # Auto-fit column widths
     for col in ws.columns:
