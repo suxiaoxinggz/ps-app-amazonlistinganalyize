@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import Uploader from '@/components/Uploader';
 import MatrixView from '@/components/MatrixView';
 import { Header } from '@/components/Header';
@@ -9,6 +9,13 @@ import axios from 'axios';
 import { useTranslation } from '@/lib/i18n';
 import ProjectEntry from '@/components/ProjectEntry';
 import StepGuide from '@/components/StepGuide';
+import {
+    getDefaultModelsForProvider,
+    getEffectiveProviderUrl,
+    getFetchModelsUrl,
+    parseModelListResponse,
+    PROVIDERS,
+} from '@/lib/providerConfig';
 
 // Shadcn Components
 import { Button } from "@/components/ui/button";
@@ -91,8 +98,9 @@ export default function MainPage() {
     // API Settings
     const [provider, setProvider] = useState('OpenAI');
     const [apiKey, setApiKey] = useState('');
+    const [useTokenPlan, setUseTokenPlan] = useState(false);
     const [baseUrl, setBaseUrl] = useState('https://api.openai.com/v1');
-    const [model, setModel] = useState('gpt-3.5-turbo');
+    const [model, setModel] = useState('gpt-4o-mini');
     const [isTranslating, setIsTranslating] = useState(false);
     const [isOptimizing, setIsOptimizing] = useState(false);
 
@@ -105,48 +113,54 @@ export default function MainPage() {
     const [expandedTranslation, setExpandedTranslation] = useState<number | null>(null);
     const [availableModels, setAvailableModels] = useState<string[]>([]);
 
-    const providers: Record<string, { url: string; models: string[] }> = useMemo(() => ({
-        'OpenAI': { url: 'https://api.openai.com/v1', models: ['gpt-3.5-turbo', 'gpt-4-turbo', 'gpt-4o'] },
-        'DeepSeek': { url: 'https://api.deepseek.com', models: ['deepseek-chat', 'deepseek-coder'] },
-        'OpenRouter': { url: 'https://openrouter.ai/api/v1', models: ['openai/gpt-3.5-turbo', 'anthropic/claude-3-opus', 'google/gemini-pro'] },
-        'Google': { url: 'https://generativelanguage.googleapis.com/v1beta/openai/', models: ['gemini-1.5-flash', 'gemini-1.5-pro'] }
-    }), []);
+    const providers = PROVIDERS;
 
     const handleProviderChange = (newProvider: string) => {
+        const nextUseTokenPlan = false;
+        const nextModels = getDefaultModelsForProvider(newProvider, nextUseTokenPlan);
         setProvider(newProvider);
-        setBaseUrl(providers[newProvider].url);
-        setModel(providers[newProvider].models[0]);
+        setUseTokenPlan(nextUseTokenPlan);
+        setBaseUrl(getEffectiveProviderUrl(newProvider, nextUseTokenPlan));
+        setModel(nextModels[0]);
+        setAvailableModels(nextModels);
+    };
+
+    const handleTokenPlanChange = (enabled: boolean) => {
+        const nextModels = getDefaultModelsForProvider(provider, enabled);
+        setUseTokenPlan(enabled);
+        setBaseUrl(getEffectiveProviderUrl(provider, enabled));
+        setModel(nextModels[0]);
+        setAvailableModels(nextModels);
     };
 
     useEffect(() => {
-        setAvailableModels(providers[provider].models);
-    }, [provider, providers]);
+        setAvailableModels(getDefaultModelsForProvider(provider, useTokenPlan));
+    }, [provider, useTokenPlan]);
 
     const fetchModels = async () => {
         try {
-            let fetchedModels: string[] = [];
-            if (provider === 'OpenRouter') {
-                const response = await axios.get('https://openrouter.ai/api/v1/models');
-                fetchedModels = response.data.data.map((m: { id: string }) => m.id);
-            } else if (provider === 'Google') {
-                if (!apiKey) { alert('API Key Required'); return; }
-                const response = await axios.get(`https://generativelanguage.googleapis.com/v1beta/models`, {
-                    headers: { 'x-goog-api-key': apiKey }
-                });
-                fetchedModels = response.data.models.map((m: { name: string }) => m.name.replace('models/', ''));
-            } else {
-                if (!apiKey) { alert('API Key Required'); return; }
-                let url = baseUrl;
-                if (!url.endsWith('/')) url += '/';
-                url += 'models';
-                const response = await axios.get(url, { headers: { 'Authorization': `Bearer ${apiKey}` } });
-                fetchedModels = response.data.data.map((m: { id: string }) => m.id);
-            }
-            fetchedModels.sort();
+            if (provider !== 'OpenRouter' && !apiKey) { alert('API Key Required'); return; }
+
+            const url = getFetchModelsUrl(provider, baseUrl, useTokenPlan);
+            const headers = provider === 'OpenRouter'
+                ? undefined
+                : provider === 'Google'
+                    ? { 'x-goog-api-key': apiKey }
+                    : { 'Authorization': `Bearer ${apiKey}` };
+            const response = await axios.get(url, headers ? { headers } : undefined);
+            const fetchedModels = parseModelListResponse(provider, response.data).sort();
+            if (fetchedModels.length === 0) throw new Error('No compatible chat models found.');
             setAvailableModels(fetchedModels);
-            if (fetchedModels.length > 0) setModel(fetchedModels[0]);
+            setModel(fetchedModels[0]);
         } catch (error) {
             console.error(error);
+            if (provider === 'Tencent TokenHub') {
+                const fallbackModels = getDefaultModelsForProvider(provider, useTokenPlan);
+                setAvailableModels(fallbackModels);
+                setModel(fallbackModels[0]);
+                alert("Failed to fetch models. Using Tencent TokenHub default list.");
+                return;
+            }
             alert("Failed to fetch models.");
         }
     };
@@ -604,6 +618,22 @@ export default function MainPage() {
                                 </SelectContent>
                             </Select>
                         </div>
+                        {provider === 'Tencent TokenHub' && (
+                            <label className="flex items-start gap-3 rounded-md border p-3 text-sm">
+                                <input
+                                    type="checkbox"
+                                    className="mt-1 h-4 w-4"
+                                    checked={useTokenPlan}
+                                    onChange={(e) => handleTokenPlanChange(e.target.checked)}
+                                />
+                                <span className="space-y-1">
+                                    <span className="block font-medium">Use Tencent Token Plan endpoint</span>
+                                    <span className="block text-muted-foreground">
+                                        Switches chat and model fetching to https://api.lkeap.cloud.tencent.com/plan/v3 and adds tc-code-latest.
+                                    </span>
+                                </span>
+                            </label>
+                        )}
                         <div className="grid gap-2">
                             <Label>{t('settings_modal.api_key')}</Label>
                             <Input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />

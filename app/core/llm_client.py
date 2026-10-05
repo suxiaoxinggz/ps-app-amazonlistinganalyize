@@ -6,7 +6,7 @@ import time
 import random
 
 class LLMClient:
-    def __init__(self, api_key: str, base_url: str = "https://api.openai.com/v1", model: str = "gpt-3.5-turbo"):
+    def __init__(self, api_key: str, base_url: str = "https://api.openai.com/v1", model: str = "gpt-4o-mini"):
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.model = model
 

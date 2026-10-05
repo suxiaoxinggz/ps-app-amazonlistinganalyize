@@ -170,14 +170,14 @@ class TranslationRequest(BaseModel):
     keywords: List[str]
     api_key: str
     base_url: str = "https://api.openai.com/v1"
-    model: str = "gpt-3.5-turbo"
+    model: str = "gpt-4o-mini"
 
 class OptimizationRequest(BaseModel):
     listing: Dict[str, str] # title, bullets
     missing_keywords: List[str]
     api_key: str
     base_url: str = "https://api.openai.com/v1"
-    model: str = "gpt-3.5-turbo"
+    model: str = "gpt-4o-mini"
     custom_prompt: Optional[str] = None
 
 class TranslateListingRequest(BaseModel):
