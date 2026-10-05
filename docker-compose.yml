@@ -5,14 +5,14 @@ services:
       dockerfile: Dockerfile.backend
     container_name: listing-backend
     ports:
-      - "8000:8000"
+      - "8723:8723"
     volumes:
       - ./uploads:/app/uploads
       - ./chroma_db:/app/chroma_db
       - ./data:/app/data
     restart: always
     environment:
-      - PORT=8000
+      - PORT=8723
       - GATEWAY_API_KEY
       - ADMIN_PASSWORD
       - BACKEND_CORS_ORIGINS
@@ -27,7 +27,7 @@ services:
         NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-}"
     container_name: listing-frontend
     ports:
-      - "3000:3000"
+      - "3179:3179"
     restart: always
     environment:
       - NODE_ENV=production

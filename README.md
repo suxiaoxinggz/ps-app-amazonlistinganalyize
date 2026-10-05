@@ -115,8 +115,8 @@ docker compose up -d --build
 
 **4. 访问应用 / Access**
 
-- 前端: `http://localhost:3000`
-- 后端 API: `http://localhost:8000`
+- 前端: `http://localhost:3179`
+- 后端 API: `http://localhost:8723`
 
 ### 方式二：本地开发 / Local Development
 
@@ -132,7 +132,7 @@ source venv/bin/activate  # macOS/Linux
 pip install -r requirements.txt
 
 # 启动后端
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8723 --reload
 ```
 
 **前端 / Frontend:**
@@ -233,7 +233,7 @@ ADMIN_PASSWORD=your_admin_password
 # 推荐留空：用同一个域名反代前端和后端
 NEXT_PUBLIC_API_URL=
 # 同源反代通常不用改；分域部署时填前端域名
-BACKEND_CORS_ORIGINS=http://localhost:3000
+BACKEND_CORS_ORIGINS=http://localhost:3179
 EOF
 
 # 3. 启动
@@ -268,7 +268,7 @@ server {
     server_name listing.yourdomain.com;
 
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:3179;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }
@@ -282,7 +282,7 @@ server {
     client_max_body_size 50M;
 
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:8723;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }

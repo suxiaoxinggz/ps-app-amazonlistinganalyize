@@ -39,8 +39,8 @@
     # 1. 设置 API Key (请将 your_secret... 换成您自己的复杂密码)
     echo "GATEWAY_API_KEY=your_secret_key_888888" >> .env
     
-    # 2. 设置端口 (默认 8000)
-    echo "PORT=8000" >> .env
+    # 2. 设置端口 (默认 8723)
+    echo "PORT=8723" >> .env
     ```
     *或者，如果您的项目中已经有 `.env.example`，可以运行 `cp .env.example .env` 然后编辑它。*
 
@@ -95,13 +95,13 @@ nano .env
 GATEWAY_API_KEY=your_secret_key_here
 
 # [可选] 端口配置
-PORT=8000
+PORT=8723
 
 # [推荐留空] 前端访问后端的地址；留空表示同源反代
 NEXT_PUBLIC_API_URL=
 
 # [可选] 分域部署时填写前端来源；同源反代通常不用改
-BACKEND_CORS_ORIGINS=http://localhost:3000
+BACKEND_CORS_ORIGINS=http://localhost:3179
 ```
 
 > **注意**: `NEXT_PUBLIC_API_URL` 会在前端构建时注入。留空时，浏览器会请求当前域名下的 `/upload`、`/analyze`、`/api/*`、`/project/*` 等路径，适合单域名反代部署。
@@ -128,11 +128,11 @@ docker compose up -d --build
 确保 1Panel 的 OpenResty (Nginx) 反向代理配置正确：
 
 ### 1. 后端 (api.example.com)
-- **目标 URL**: `http://127.0.0.1:8000`
+- **目标 URL**: `http://127.0.0.1:8723`
 - **HTTPS**: 开启并申请证书
 
 ### 2. 前端 (app.example.com)
-- **目标 URL**: `http://127.0.0.1:3000`
+- **目标 URL**: `http://127.0.0.1:3179`
 - **HTTPS**: 开启并申请证书
 
 ---
@@ -142,7 +142,7 @@ docker compose up -d --build
 1.  **检查容器状态**:
     ```bash
     docker ps
-    # 应该看到 listing-backend (0.0.0.0:8000) 和 listing-frontend (0.0.0.0:3000)
+    # 应该看到 listing-backend (0.0.0.0:8723) 和 listing-frontend (0.0.0.0:3179)
     ```
 
 2.  **验证后端 API**:

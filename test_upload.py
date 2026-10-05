@@ -14,7 +14,7 @@ def create_dummy_excel():
 
 def test_upload():
     filename = create_dummy_excel()
-    api_host = os.getenv('API_HOST', 'http://localhost:8000').rstrip('/')
+    api_host = os.getenv('API_HOST', 'http://localhost:8723').rstrip('/')
     url = f'{api_host}/upload'
     
     try:

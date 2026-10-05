@@ -15,7 +15,7 @@ app = FastAPI(title="Amazon Listing Analyzer")
 
 
 def _parse_cors_origins() -> List[str]:
-    origins = os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000")
+    origins = os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3179")
     return [origin.strip() for origin in origins.split(",") if origin.strip()]
 
 
@@ -410,4 +410,4 @@ async def gateway_health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8723)
