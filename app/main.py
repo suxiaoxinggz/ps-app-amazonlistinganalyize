@@ -13,15 +13,17 @@ from app.core import project_manager
 
 app = FastAPI(title="Amazon Listing Analyzer")
 
-# CORS
+
+def _parse_cors_origins() -> List[str]:
+    origins = os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000")
+    return [origin.strip() for origin in origins.split(",") if origin.strip()]
+
+
+# CORS. Same-origin reverse proxy deployments usually do not need CORS; set
+# BACKEND_CORS_ORIGINS when the frontend and backend use different origins.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://listing.mistorify.com",
-        "https://api.mistorify.com",
-        "http://listing.mistorify.com",
-        "http://localhost:3000"
-    ],
+    allow_origins=_parse_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

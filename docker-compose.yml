@@ -15,13 +15,16 @@ services:
       - PORT=8000
       - GATEWAY_API_KEY
       - ADMIN_PASSWORD
+      - BACKEND_CORS_ORIGINS
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: https://api.mistorify.com
+        # Empty default means browser calls same-origin paths such as /analyze.
+        # Set NEXT_PUBLIC_API_URL in .env only if backend is on a separate origin.
+        NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-}"
     container_name: listing-frontend
     ports:
       - "3000:3000"

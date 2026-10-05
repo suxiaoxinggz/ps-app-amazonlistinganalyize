@@ -4,7 +4,7 @@
 
 ## 1. 前端 (Next.js)
 - **未配置代理**：`frontend/next.config.ts` 中不包含任何 `rewrites` 或 `proxy` 配置。
-- **直接连接**：前端通过 `NEXT_PUBLIC_API_URL`（通常为 `https://api.mistorify.com`）直接访问后端。
+- **直接连接**：前端通过 `NEXT_PUBLIC_API_URL`（通常为 `https://api.example.com`）直接访问后端。
 
 ## 2. 后端 (FastAPI) 作为 "AI 网关"
 后端 (`app/main.py`) **确实** 充当了 AI 服务的代理/网关：

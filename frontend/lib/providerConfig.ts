@@ -3,6 +3,7 @@ export interface ProviderConfig {
   models: string[];
 }
 
+export const DEFAULT_BACKEND_URL = '';
 export const TENCENT_TOKEN_PLAN_URL = 'https://api.lkeap.cloud.tencent.com/plan/v3';
 
 const tencentTokenHubModels = [

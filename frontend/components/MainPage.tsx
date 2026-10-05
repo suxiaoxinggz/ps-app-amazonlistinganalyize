@@ -10,6 +10,7 @@ import { useTranslation } from '@/lib/i18n';
 import ProjectEntry from '@/components/ProjectEntry';
 import StepGuide from '@/components/StepGuide';
 import {
+    DEFAULT_BACKEND_URL,
     getDefaultModelsForProvider,
     getEffectiveProviderUrl,
     getFetchModelsUrl,
@@ -66,7 +67,7 @@ export default function MainPage() {
     const { t } = useTranslation();
 
     // -- State --
-    const [backendUrl, setBackendUrl] = useState(process.env.NEXT_PUBLIC_API_URL || 'https://api.mistorify.com');
+    const [backendUrl, setBackendUrl] = useState(process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_BACKEND_URL);
     const [showSettings, setShowSettings] = useState(false);
 
     // Persistence

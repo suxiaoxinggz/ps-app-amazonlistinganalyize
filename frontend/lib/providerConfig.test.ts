@@ -2,12 +2,17 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+  DEFAULT_BACKEND_URL,
   getEffectiveProviderUrl,
   getDefaultModelsForProvider,
   getFetchModelsUrl,
   parseModelListResponse,
   PROVIDERS,
 } from './providerConfig.ts';
+
+test('default backend URL is same-origin empty string', () => {
+  assert.equal(DEFAULT_BACKEND_URL, '');
+});
 
 test('Tencent TokenHub defaults include normal and original direct model IDs', () => {
   const models = getDefaultModelsForProvider('Tencent TokenHub', false);

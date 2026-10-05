@@ -183,7 +183,8 @@ npm run dev
 |------|------|------|
 | `GATEWAY_API_KEY` | 可选 | AI 网关密钥，保护翻译/优化 API |
 | `ADMIN_PASSWORD` | 可选 | 管理员密码，用于清空所有项目数据 |
-| `NEXT_PUBLIC_API_URL` | 构建时 | 后端 API 地址（生产环境，在 docker-compose.yml 中配置） |
+| `NEXT_PUBLIC_API_URL` | 构建时 | 前端浏览器访问后端的地址；留空表示同源反代，填完整 URL 表示独立后端域名 |
+| `BACKEND_CORS_ORIGINS` | 可选 | 后端允许跨域的前端来源；同源反代通常不用改，分域部署时填前端域名 |
 
 ---
 
@@ -229,6 +230,10 @@ cd listing-analyzer
 cat > .env << EOF
 GATEWAY_API_KEY=your_secret_key
 ADMIN_PASSWORD=your_admin_password
+# 推荐留空：用同一个域名反代前端和后端
+NEXT_PUBLIC_API_URL=
+# 同源反代通常不用改；分域部署时填前端域名
+BACKEND_CORS_ORIGINS=http://localhost:3000
 EOF
 
 # 3. 启动

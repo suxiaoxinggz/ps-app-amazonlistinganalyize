@@ -1,12 +1,12 @@
 # 🚀 亚马逊 Listing 检查器 - 完整部署指南 (从零开始)
 
-这份指南适用于**全新的服务器环境**（或已清空旧数据的环境）。我们将一步步部署**前端** (`listing.mistorify.com`) 和 **后端 API** (`api.mistorify.com`)。
+这份指南适用于**全新的服务器环境**（或已清空旧数据的环境）。我们将一步步部署**前端** (`app.example.com`) 和 **后端 API** (`api.example.com`)。
 
 ---
 
 ## 第一步：Cloudflare DNS 解析
 
-登录 Cloudflare，确保您的域名 `mistorify.com` 下有以下两条 **A 记录**：
+登录 Cloudflare，确保您的域名 `example.com` 下有以下两条 **A 记录**：
 
 | 如果您想用... | 记录类型 | 名称 (Name) | 内容 (Content) | 代理状态 (Proxy) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -56,7 +56,7 @@
 ## 前置要求
 - **VPS**: 已安装 Ubuntu/Debian/CentOS
 - **Docker**: 已安装 Docker 和 Docker Compose
-- **域名**: `listing.mistorify.com` (前端) 和 `api.mistorify.com` (后端) 均已解析到服务器 IP
+- **域名**: `app.example.com` (前端) 和 `api.example.com` (后端) 均已解析到服务器 IP
 - **防火墙**: 仅开放 80, 443, 22 端口 (推荐只允许 Cloudflare IP 访问 80/443)
 
 ---
@@ -96,9 +96,15 @@ GATEWAY_API_KEY=your_secret_key_here
 
 # [可选] 端口配置
 PORT=8000
+
+# [推荐留空] 前端访问后端的地址；留空表示同源反代
+NEXT_PUBLIC_API_URL=
+
+# [可选] 分域部署时填写前端来源；同源反代通常不用改
+BACKEND_CORS_ORIGINS=http://localhost:3000
 ```
 
-> **注意**: `NEXT_PUBLIC_API_URL` 已经硬编码在 `docker-compose.yml` 中为 `https://api.mistorify.com`，您无需在 `.env` 中配置它，除非您想覆盖构建参数。
+> **注意**: `NEXT_PUBLIC_API_URL` 会在前端构建时注入。留空时，浏览器会请求当前域名下的 `/upload`、`/analyze`、`/api/*`、`/project/*` 等路径，适合单域名反代部署。
 
 ---
 
@@ -121,11 +127,11 @@ docker compose up -d --build
 
 确保 1Panel 的 OpenResty (Nginx) 反向代理配置正确：
 
-### 1. 后端 (api.mistorify.com)
+### 1. 后端 (api.example.com)
 - **目标 URL**: `http://127.0.0.1:8000`
 - **HTTPS**: 开启并申请证书
 
-### 2. 前端 (listing.mistorify.com)
+### 2. 前端 (app.example.com)
 - **目标 URL**: `http://127.0.0.1:3000`
 - **HTTPS**: 开启并申请证书
 
@@ -139,13 +145,16 @@ docker compose up -d --build
     # 应该看到 listing-backend (0.0.0.0:8000) 和 listing-frontend (0.0.0.0:3000)
     ```
 
-2.  **验证后端 API (公网)**:
+2.  **验证后端 API**:
     ```bash
-    curl https://api.mistorify.com/
+    # 同源反代部署
+    curl https://你的前端域名/
+    # 或分域部署
+    curl https://你的API域名/
     # 应该返回: {"message": "Amazon Listing Analyzer API is running"}
     ```
 
 3.  **验证前端连接**:
-    打开浏览器访问 `https://listing.mistorify.com`。
-    点击右上角设置图标，确认 "Backend URL" 默认为 `https://api.mistorify.com`。
+    打开浏览器访问你的前端域名。
+    点击右上角设置图标；同源反代部署时 "Backend URL" 默认为空，表示请求当前域名下的后端路径。
 (对应您在第二步设置的密码)。

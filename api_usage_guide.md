@@ -2,7 +2,7 @@
 
 本文档用于指导第三方应用或网站接入本服务的 API 能力。
 
-**Base URL**: `https://api.mistorify.com`
+**Base URL**: 同源部署时使用当前站点根路径；独立 API 域名部署时使用你的后端地址，例如 `https://api.example.com`
 
 ---
 
@@ -175,10 +175,11 @@
 ## 📝 示例代码 (Python)
 
 ```python
+import os
 import requests
 
-API_HOST = "https://api.mistorify.com"
-GATEWAY_KEY = "your_server_gateway_key"
+API_HOST = os.getenv("API_HOST", "https://your-domain.example")
+GATEWAY_KEY = os.getenv("GATEWAY_API_KEY", "your_server_gateway_key")
 
 def get_similarity(text1, text2):
     url = f"{API_HOST}/gateway/v1/similarity"
