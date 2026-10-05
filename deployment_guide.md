@@ -90,11 +90,14 @@ nano .env
 ```ini
 # .env file
 
+# [可选] Docker 对外统一入口端口；1Panel 只需要反代到这个端口
+APP_PORT=18080
+
 # [必须] AI 网关密钥
 # 前端调用后端高级功能时需要此密钥，也是您调用 API Gateway 的凭证
 GATEWAY_API_KEY=your_secret_key_here
 
-# [可选] 端口配置
+# [可选] 后端容器内部端口
 PORT=8723
 
 # [推荐留空] 前端访问后端的地址；留空表示同源反代
@@ -130,15 +133,12 @@ docker compose up -d --build
 
 ## 第四步：1Panel 反向代理配置
 
-确保 1Panel 的 OpenResty (Nginx) 反向代理配置正确：
+`docker-compose.yml` 已内置 `listing-gateway` Nginx 容器，负责自动分发前端和后端路径。因此 1Panel 只需要配置一个反向代理：
 
-### 1. 后端 (api.example.com)
-- **目标 URL**: `http://127.0.0.1:8723`
+- **目标 URL**: `http://127.0.0.1:18080`
 - **HTTPS**: 开启并申请证书
 
-### 2. 前端 (app.example.com)
-- **目标 URL**: `http://127.0.0.1:3179`
-- **HTTPS**: 开启并申请证书
+如果你修改了 `.env` 里的 `APP_PORT`，目标 URL 端口也同步改成对应值。
 
 ---
 
@@ -147,7 +147,7 @@ docker compose up -d --build
 1.  **检查容器状态**:
     ```bash
     docker ps
-    # 应该看到 listing-backend (0.0.0.0:8723) 和 listing-frontend (0.0.0.0:3179)
+    # 应该看到 listing-gateway (0.0.0.0:18080)、listing-backend、listing-frontend
     ```
 
 2.  **验证后端 API**:

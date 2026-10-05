@@ -181,6 +181,7 @@ npm run dev
 
 | 变量 | 必填 | 说明 |
 |------|------|------|
+| `APP_PORT` | 可选 | Docker 对外统一入口端口，默认 `18080`；1Panel 只需要反代到这个端口 |
 | `GATEWAY_API_KEY` | 可选 | AI 网关密钥，保护翻译/优化 API |
 | `ADMIN_PASSWORD` | 可选 | 管理员密码，用于清空所有项目数据 |
 | `NEXT_PUBLIC_API_URL` | 构建时 | 前端浏览器访问后端的地址；留空表示同源反代，填完整 URL 表示独立后端域名 |
@@ -231,9 +232,10 @@ cd listing-analyzer
 
 # 2. 创建 .env 文件
 cat > .env << EOF
+APP_PORT=18080
 GATEWAY_API_KEY=your_secret_key
 ADMIN_PASSWORD=your_admin_password
-# 推荐留空：用同一个域名反代前端和后端
+# 推荐留空：用内置 Nginx gateway 同源转发前端和后端
 NEXT_PUBLIC_API_URL=
 # 同源反代通常不用改；分域部署时填前端域名
 BACKEND_CORS_ORIGINS=http://localhost:3179
@@ -269,35 +271,21 @@ docker compose up -d --build
 
 > 更换 `EMBEDDING_MODEL` 后，已有 ChromaDB 向量仍来自旧模型。建议重新上传关键词 Excel 或清理对应项目数据，让系统用新模型重建索引。
 
-### Nginx 反向代理配置示例 / Nginx Reverse Proxy
+### 1Panel / Nginx 反向代理
 
-```nginx
-# 前端
-server {
-    listen 443 ssl;
-    server_name listing.yourdomain.com;
+`docker-compose.yml` 已内置 `listing-gateway` Nginx 容器，负责把前端和后端路径分发好：
 
-    location / {
-        proxy_pass http://127.0.0.1:3179;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
+- `/api/template` → 前端 Next.js 下载模板接口
+- `/api/*`、`/upload`、`/analyze`、`/project/*`、`/admin/*`、`/gateway/*`、`/template/*` → 后端
+- 其他路径 → 前端
 
-# 后端 API
-server {
-    listen 443 ssl;
-    server_name api.yourdomain.com;
+因此 1Panel 里只需要把你的域名反代到一个地址：
 
-    client_max_body_size 50M;
-
-    location / {
-        proxy_pass http://127.0.0.1:8723;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
+```txt
+http://127.0.0.1:18080
 ```
+
+如果你修改了 `.env` 里的 `APP_PORT`，就反代到对应端口。
 
 ---
 
