@@ -2,6 +2,7 @@ import chromadb
 from sentence_transformers import SentenceTransformer, util
 from transformers import pipeline
 from sklearn.feature_extraction.text import CountVectorizer
+import os
 import pandas as pd
 from typing import List, Dict, Any, Tuple
 import re
@@ -9,17 +10,29 @@ import re
 class HybridMatcher:
     def __init__(self, collection_name: str = "amazon_keywords"):
         self.client = chromadb.PersistentClient(path="./chroma_db")
-        # 1. Text Embedding Model
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-        # 2. Sentiment Analysis Model (Lazy load or init here)
-        # Using distilbert-sst2 (small and fast)
+        self.embedding_model_name = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
+        self.sentiment_model_name = os.getenv("SENTIMENT_MODEL", "distilbert-base-uncased-finetuned-sst-2-english")
+        self.normalize_embeddings = os.getenv("EMBEDDING_NORMALIZE", "true").lower() in {"1", "true", "yes", "on"}
+
+        # 1. Text Embedding Model. BGE-small is still lightweight (384 dimensions)
+        # but generally stronger than all-MiniLM-L6-v2 for semantic matching.
+        self.embedding_model = SentenceTransformer(self.embedding_model_name)
+        # 2. Sentiment Analysis Model (optional gateway feature). Keep the small
+        # SST-2 model by default and allow replacement via SENTIMENT_MODEL.
         try:
-            self.sentiment_analyzer = pipeline("sentiment-analysis", model="distilbert-base-uncased-finetuned-sst-2-english")
+            self.sentiment_analyzer = pipeline("sentiment-analysis", model=self.sentiment_model_name)
         except Exception as e:
-            print(f"Warning: Could not load sentiment model: {e}")
+            print(f"Warning: Could not load sentiment model {self.sentiment_model_name}: {e}")
             self.sentiment_analyzer = None
 
         self.collection = self.client.get_or_create_collection(name=collection_name)
+
+    def _encode(self, texts, **kwargs):
+        return self.embedding_model.encode(
+            texts,
+            normalize_embeddings=self.normalize_embeddings,
+            **kwargs,
+        )
 
     def get_embeddings(self, texts: List[str]) -> List[List[float]]:
         """
@@ -27,15 +40,15 @@ class HybridMatcher:
         """
         if not texts:
             return []
-        embeddings = self.embedding_model.encode(texts).tolist()
+        embeddings = self._encode(texts).tolist()
         return embeddings
 
     def calculate_similarity(self, text1: str, text2: str) -> float:
         """
         Gateway Method: Calculates cosine similarity between two texts.
         """
-        emb1 = self.embedding_model.encode(text1, convert_to_tensor=True)
-        emb2 = self.embedding_model.encode(text2, convert_to_tensor=True)
+        emb1 = self._encode(text1, convert_to_tensor=True)
+        emb2 = self._encode(text2, convert_to_tensor=True)
         score = util.cos_sim(emb1, emb2)
         return float(score[0][0])
         
@@ -63,8 +76,8 @@ class HybridMatcher:
         except Exception:
             return []
 
-        doc_embedding = self.embedding_model.encode([text])
-        candidate_embeddings = self.embedding_model.encode(candidates)
+        doc_embedding = self._encode([text])
+        candidate_embeddings = self._encode(candidates)
 
         # 2. Calculate distances
         distances = util.cos_sim(doc_embedding, candidate_embeddings)
@@ -107,7 +120,7 @@ class HybridMatcher:
             
         if documents:
             # Generate embeddings
-            embeddings = self.embedding_model.encode(documents).tolist()
+            embeddings = self._encode(documents).tolist()
             
             # Batch add to avoid ChromaDB batch size limits
             batch_size = 5000
@@ -140,7 +153,7 @@ class HybridMatcher:
         """
         Performs semantic search using vector embeddings.
         """
-        query_embedding = self.embedding_model.encode([query_text]).tolist()
+        query_embedding = self._encode([query_text]).tolist()
         
         results = self.collection.query(
             query_embeddings=query_embedding,

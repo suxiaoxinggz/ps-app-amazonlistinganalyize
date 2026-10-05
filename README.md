@@ -185,6 +185,9 @@ npm run dev
 | `ADMIN_PASSWORD` | 可选 | 管理员密码，用于清空所有项目数据 |
 | `NEXT_PUBLIC_API_URL` | 构建时 | 前端浏览器访问后端的地址；留空表示同源反代，填完整 URL 表示独立后端域名 |
 | `BACKEND_CORS_ORIGINS` | 可选 | 后端允许跨域的前端来源；同源反代通常不用改，分域部署时填前端域名 |
+| `EMBEDDING_MODEL` | 可选 | 关键词向量匹配模型，默认 `BAAI/bge-small-en-v1.5` |
+| `EMBEDDING_NORMALIZE` | 可选 | 是否归一化 embedding，默认 `true` |
+| `SENTIMENT_MODEL` | 可选 | `/gateway/v1/sentiment` 使用的小型情感分析模型 |
 
 ---
 
@@ -234,6 +237,10 @@ ADMIN_PASSWORD=your_admin_password
 NEXT_PUBLIC_API_URL=
 # 同源反代通常不用改；分域部署时填前端域名
 BACKEND_CORS_ORIGINS=http://localhost:3179
+# 本地向量模型：效果更好但仍轻量
+EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
+EMBEDDING_NORMALIZE=true
+SENTIMENT_MODEL=distilbert-base-uncased-finetuned-sst-2-english
 EOF
 
 # 3. 启动
@@ -258,6 +265,9 @@ docker compose up -d --build
 | `/app/uploads` | `./uploads` | 上传的 Excel 文件 |
 | `/app/chroma_db` | `./chroma_db` | ChromaDB 向量数据 |
 | `/app/data` | `./data` | 项目数据库 + 关键词缓存 |
+| `/app/.cache/huggingface` | `./hf_cache` | Hugging Face 模型缓存，避免重建容器后重复下载 |
+
+> 更换 `EMBEDDING_MODEL` 后，已有 ChromaDB 向量仍来自旧模型。建议重新上传关键词 Excel 或清理对应项目数据，让系统用新模型重建索引。
 
 ### Nginx 反向代理配置示例 / Nginx Reverse Proxy
 

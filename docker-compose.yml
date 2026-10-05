@@ -10,12 +10,17 @@ services:
       - ./uploads:/app/uploads
       - ./chroma_db:/app/chroma_db
       - ./data:/app/data
+      - ./hf_cache:/app/.cache/huggingface
     restart: always
     environment:
       - PORT=8723
       - GATEWAY_API_KEY
       - ADMIN_PASSWORD
       - BACKEND_CORS_ORIGINS
+      - HF_HOME=/app/.cache/huggingface
+      - EMBEDDING_MODEL
+      - EMBEDDING_NORMALIZE
+      - SENTIMENT_MODEL
 
   frontend:
     build:

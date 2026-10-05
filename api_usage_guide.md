@@ -46,7 +46,7 @@
     ```json
     {
       "embeddings": [[0.1, 0.2, ...], [0.3, 0.4, ...]],
-      "model": "all-MiniLM-L6-v2",
+      "model": "BAAI/bge-small-en-v1.5",
       "count": 2
     }
     ```

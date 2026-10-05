@@ -102,6 +102,11 @@ NEXT_PUBLIC_API_URL=
 
 # [可选] 分域部署时填写前端来源；同源反代通常不用改
 BACKEND_CORS_ORIGINS=http://localhost:3179
+
+# [可选] 本地向量/网关模型；默认轻量且比旧 all-MiniLM 效果更好
+EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
+EMBEDDING_NORMALIZE=true
+SENTIMENT_MODEL=distilbert-base-uncased-finetuned-sst-2-english
 ```
 
 > **注意**: `NEXT_PUBLIC_API_URL` 会在前端构建时注入。留空时，浏览器会请求当前域名下的 `/upload`、`/analyze`、`/api/*`、`/project/*` 等路径，适合单域名反代部署。

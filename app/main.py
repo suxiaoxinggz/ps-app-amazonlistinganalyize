@@ -315,7 +315,7 @@ class EmbeddingRequest(BaseModel):
 
 class EmbeddingResponse(BaseModel):
     embeddings: List[List[float]]
-    model: str = "all-MiniLM-L6-v2"
+    model: str = "BAAI/bge-small-en-v1.5"
     count: int
 
 class SimilarityRequest(BaseModel):
@@ -343,7 +343,7 @@ async def get_embeddings(request: EmbeddingRequest):
         embeddings = _default_analyzer.matcher.get_embeddings(request.texts)
         return {
             "embeddings": embeddings,
-            "model": "all-MiniLM-L6-v2",
+            "model": _default_analyzer.matcher.embedding_model_name,
             "count": len(embeddings)
         }
     except Exception as e:
@@ -369,7 +369,7 @@ async def check_similarity(request: SimilarityRequest):
 async def analyze_sentiment(request: SentimentRequest):
     """
     Gateway Endpoint: Analyze sentiment (Positive/Negative) for list of texts.
-    Uses 'distilbert-base-uncased-finetuned-sst-2-english'.
+    Uses the SENTIMENT_MODEL environment variable.
     """
     try:
         results = _default_analyzer.matcher.analyze_sentiment(request.texts)
@@ -397,9 +397,9 @@ async def gateway_health():
     """
     Gateway Endpoint: Check system status.
     """
-    models = ["all-MiniLM-L6-v2"]
+    models = [_default_analyzer.matcher.embedding_model_name]
     if _default_analyzer.matcher.sentiment_analyzer:
-        models.append("distilbert-sentiment")
+        models.append(_default_analyzer.matcher.sentiment_model_name)
         
     return {
         "status": "healthy",
